@@ -134,7 +134,13 @@ to 4 time frame to investigate each one of them (2010-2012, 2013-2015,
 
 Here are the plots of each time frame that we filtered.
 
-![](EC48T_Project_files/figure-markdown_strict/unnamed-chunk-8-1.png)![](EC48T_Project_files/figure-markdown_strict/unnamed-chunk-8-2.png)![](EC48T_Project_files/figure-markdown_strict/unnamed-chunk-8-3.png)![](EC48T_Project_files/figure-markdown_strict/unnamed-chunk-8-4.png)
+![](https://github.com/atakanpeker/R_FinancialModel_Project/blob/main/2010-2012.png)
+
+![](https://github.com/atakanpeker/R_FinancialModel_Project/blob/main/2013-2015.png)
+
+![](https://github.com/atakanpeker/R_FinancialModel_Project/blob/main/2016-2018.png)
+
+![](https://github.com/atakanpeker/R_FinancialModel_Project/blob/main/2019-2021.png)
 
 We may say that each plot seems RUB/TRY and WTI/TRY are highly
 correlated, but this claim should be supported by calculations.
