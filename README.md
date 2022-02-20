@@ -30,6 +30,45 @@ To read the report, please click on the github document called "EC48T_Project.md
 
 **Packages:** Tidyverse, Quantmod
 
+## Profit Calculation Formula
+
+```
+ProfitCalculate <- function(wti_price, rub_price, coeff, int, day_lag, initial_budget, trade_amount)
+{
+  if(length(wti_price)!=length(rub_price))
+  {
+    return("Prices series should have the same length")
+  }
+  
+  rub_hold <- 0
+  wti_hold <- 0
+  budget <- initial_budget
+  
+  start <- day_lag+1
+  end <- length(rub_price)-1
+  
+  for(i in start:end)
+  {
+    
+    if(rub_price[i] >= wti_price[i-day_lag])
+    {
+      budget + 100
+      rub_hold <- rub_hold - rub_price/100
+    }
+    
+    else if(rub_price[i] < wti_price[i-day_lag])
+    {
+      budget - 100
+      rub_hold <- rub_hold + rub_price[i]/100
+    }
+  }
+  
+  calced_profit <- budget + rub_price[length(rub_price)] * rub_hold - initial_budget
+  
+  return(paste("Profit = ", calced_profit))
+}
+```
+
 ## Plots
 
 Here's the graphs of one time frame as an example.
