@@ -1,0 +1,309 @@
+---
+title: "EC48T_Project"
+author: "Atakan"
+date: "20/02/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About
+
+This is our group project (3 contributing members) for our "Financial Modelling and Its Applications Using R" course. 
+
+This report's aim is trying to find a cross correlation between RUB/TRY and WTI/TRY price through evaluating "Adjusted" prices.
+
+We collected data, which is from 2010 and 2021, from yahoo finance, divided them into 4 time frames, and evaluating each one of them.
+
+Also, this report presents a basic financial model based on the trading opportunity that may come out with WTI crude oil prices and the currency. 
+
+Through this model, we wanted to know whether we can make profit out of this opportunity.
+
+After the calculations, we found a positive correlation and trading opportunity. However, we make very small profit out of it. 
+
+We used "quantmod" and "tidyverse" packages in our project.
+
+```{r, message=FALSE, warning=FALSE}
+library(quantmod)
+library(tidyverse)
+```
+
+## Collecting the data
+
+  We are collecting the data from yahoo finance. However, yahoo finance does not have RUB/TRY and WTI(according to TRY) data so we basically took RUB/USD, TRY/USD, and WTI (in terms of USD). 
+  
+  Then, we adjusted those to have RUB/TRY and WTI values in TRY through assigning new variables.
+
+```{r, message=FALSE, warning=FALSE}
+rub <- getSymbols("RUB=X", src = "yahoo", from = as.Date("2010-01-01"), to = as.Date("2021-12-31"), auto.assign = F)
+try <- getSymbols("TRY=X", src = "yahoo", from = as.Date("2010-01-01"), to = as.Date("2021-12-31"), auto.assign = F)
+wti_crude_oil <- getSymbols("CL=F", src = "yahoo", from = as.Date("2010-01-01"), to = as.Date("2021-12-31"), auto.assign = F)
+
+rubtry <- try/rub
+
+wti <- wti_crude_oil*try
+```
+
+## Cleaning the data
+
+  To clean the "rubtry" and "wti" data, we need to create dataframes out of them.
+
+```{r}
+rubtry <- data.frame(Date = index(rubtry), rubtry, row.names = NULL)
+
+wti <- data.frame(Date = index(wti), wti, row.names = NULL)
+```
+  
+  First, we cleaned the rubtry data.
+  
+  We decided that we do not need the "Volume" of rubtry, we omitted the null values, and assigned much more cleaner column names.
+  
+  We found only one outlier in the "Adjusted" column which is a incorrect as we controlled it, so we removed it from our dataframe.
+
+```{r}
+rubtry <- select(rubtry, -TRY.X.Volume)
+
+rubtry <- na.omit(rubtry)
+
+colnames(rubtry) <- c("Date", "Open", "High", "Low", "Close", "Adjusted")
+
+if (max(rubtry["Adjusted"]) > 3) {
+  maxrow <- which.max(rubtry$Adjusted)
+  rubtry <- rubtry[c(-(maxrow)), ]
+}
+```
+  
+  For the wti data, we did not encounter with outliers or incorrect data. 
+  
+  We ommitted the null values and assigned new column names.
+  
+```{r}
+wti <- na.omit(wti)
+
+colnames(wti) <- c("Date","Open", "High", "Low", "Close", "Volume", "Adjusted")
+```
+  
+  We found out that row numbers of both dataframe are not matched with each other since we ommitted null values and an outlier (Also, the dataset we get may be problematic.)
+  
+  To solve this problem, we match each row on a dataframe with another dataframe based on their "Date" data so that if one date consists of both rubtry and wti data, then it will not be removed.
+  
+```{r}
+xrubtry <- data.frame()
+
+for (i in 1:length(rubtry$Date)){
+  
+  if (any(rubtry$Date[i] == wti$Date)){
+    xrubtry <- rbind(xrubtry, rubtry[i, ])
+  }
+}
+
+rubtry <- xrubtry
+
+xwti <- data.frame()
+
+for (i in 1:length(wti$Date)){
+  
+  if (any(wti$Date[i] == rubtry$Date)){
+    xwti <- rbind(xwti, wti[i, ])
+  }
+}
+
+wti <- xwti
+```
+  
+  Now, the row numbers are matched and we can calculate the cross correlation.
+
+## Filtering the data
+
+  For our research, we took the data from 2010 to 2021 and we divided it to 4 time frame to investigate each one of them (2010-2012, 2013-2015, 2016-2018, 2019-2021). 
+  
+```{r}
+rubtry_1 <- filter(rubtry, between(Date, as.Date("2010-01-01"), as.Date("2012-12-31")))
+rubtry_2 <- filter(rubtry, between(Date, as.Date("2013-01-01"), as.Date("2015-12-31")))
+rubtry_3 <- filter(rubtry, between(Date, as.Date("2016-01-01"), as.Date("2018-12-31")))
+rubtry_4 <- filter(rubtry, between(Date, as.Date("2019-01-01"), as.Date("2021-12-31")))
+
+wti_1 <- filter(wti, between(Date, as.Date("2010-01-01"), as.Date("2012-12-31")))
+wti_2 <- filter(wti, between(Date, as.Date("2013-01-01"), as.Date("2015-12-31")))
+wti_3 <- filter(wti, between(Date, as.Date("2016-01-01"), as.Date("2018-12-31")))
+wti_4 <- filter(wti, between(Date, as.Date("2019-01-01"), as.Date("2021-12-31")))
+```
+
+## Plots
+
+  Here are the plots of each time frame that we filtered.
+
+```{r, echo=FALSE}
+coeff_1 <- 2500
+coeff_2 <- 2800
+coeff_3 <- 2500
+coeff_4 <- 3000
+
+plot_1 <- ggplot() +
+  geom_line(data = rubtry_1, aes(x = Date, y = Adjusted, colour = "RUB/TRY")) +
+  geom_line(data = wti_1, aes(x = Date, y = Adjusted / coeff_1, colour = "WTI")) +
+  ggtitle("2010-2012 RUB/TRY and WTI Prices") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom") +
+  scale_y_continuous(
+    name = "RUB/TRY",
+    sec.axis = sec_axis(~.*coeff_1, name = "WTI")
+  ) +
+  scale_colour_manual("", 
+                      breaks = c("RUB/TRY", "WTI"),
+                      values = c("black", "red"))
+
+plot_2 <- ggplot() +
+  geom_line(data = rubtry_2, aes(x = Date, y = Adjusted, colour = "RUB/TRY")) +
+  geom_line(data = wti_2, aes(x = Date, y = Adjusted / coeff_2, colour = "WTI")) +
+  ggtitle("2013-2015 RUB/TRY and WTI Prices") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom") +
+  scale_y_continuous(
+    name = "RUB/TRY",
+    sec.axis = sec_axis(~.*coeff_2, name = "WTI")
+  ) +
+  scale_colour_manual("", 
+                      breaks = c("RUB/TRY", "WTI"),
+                      values = c("black", "red"))
+
+plot_3 <- ggplot() +
+  geom_line(data = rubtry_3, aes(x = Date, y = Adjusted, colour = "RUB/TRY")) +
+  geom_line(data = wti_3, aes(x = Date, y = Adjusted / coeff_3, colour = "WTI")) +
+  ggtitle("2016-2018 RUB/TRY and WTI Prices") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom") +
+  scale_y_continuous(
+    name = "RUB/TRY",
+    sec.axis = sec_axis(~.*coeff_3, name = "WTI")
+  ) +
+  scale_colour_manual("", 
+                      breaks = c("RUB/TRY", "WTI"),
+                      values = c("black", "red"))
+
+plot_4 <- ggplot() +
+  geom_line(data = rubtry_4, aes(x = Date, y = Adjusted, colour = "RUB/TRY")) +
+  geom_line(data = wti_4, aes(x = Date, y = Adjusted / coeff_4, colour = "WTI")) +
+  ggtitle("2019-2021 RUB/TRY and WTI Prices") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "bottom") +
+  scale_y_continuous(
+    name = "RUB/TRY",
+    sec.axis = sec_axis(~.*coeff_4, name = "WTI")
+  ) +
+  scale_colour_manual("", 
+                      breaks = c("RUB/TRY", "WTI"),
+                      values = c("black", "red"))
+
+print(plot_1)
+print(plot_2)
+print(plot_3)
+print(plot_4)
+
+```
+  
+  We may say that each plot seems RUB/TRY and WTI/TRY are highly correlated, but this claim should be supported by calculations.
+  
+## Analysis
+
+  We calculated the cross correlation and make linear regression to each time frame.
+
+### Cross Correlation
+
+```{r}
+ccf_1 <- print(ccf(rubtry_1["Adjusted"], wti_1["Adjusted"]))
+ccf_2 <- print(ccf(rubtry_2["Adjusted"], wti_2["Adjusted"]))
+ccf_3 <- print(ccf(rubtry_3["Adjusted"], wti_3["Adjusted"]))
+ccf_4 <- print(ccf(rubtry_4["Adjusted"], wti_4["Adjusted"]))
+```
+
+  With respect to these calculations, we can see that 2016-2018 time frame has the highest correlation by "0.942". Then the 2013-2015 comes as the second, 2019-2012 comes as the third, and the last one is 2010-2012.
+  
+  Clearly, we can supported the claim that RUB/TRY and WTI/TRY are positively and highly correlated within each time frame, therefore they are correlated from 2010 to 2021.
+  
+  Within these findings, we can now create a financial model that can be evaluating this correlation, finding a trading opportunity, and making profit out of it. 
+
+  But before making the model, we need to do the linear regression approach.
+  
+### Linear Regression
+
+```{r}
+test_1 <- lm(rubtry_1$Adjusted~wti_1$Adjusted)
+test_2 <- lm(rubtry_2$Adjusted~wti_2$Adjusted)
+test_3 <- lm(rubtry_3$Adjusted~wti_3$Adjusted)
+test_4 <- lm(rubtry_4$Adjusted~wti_4$Adjusted)
+
+print(test_1)
+print(test_2)
+print(test_3)
+print(test_4)
+```
+
+## Financial Model
+
+  We created a financial model that calculates the profit if there is a trading opportunity.
+  
+  The model's code is as follows:
+  
+```{r}
+ProfitCalculate <- function(wti_price, rub_price, coeff, int, day_lag, initial_budget, trade_amount)
+{
+  if(length(wti_price)!=length(rub_price))
+  {
+    return("Prices series should have the same length")
+  }
+  
+  rub_hold <- 0
+  wti_hold <- 0
+  budget <- initial_budget
+  
+  start <- day_lag+1
+  end <- length(rub_price)-1
+  
+  for(i in start:end)
+  {
+    
+    if(rub_price[i] >= wti_price[i-day_lag])
+    {
+      budget + 100
+      rub_hold <- rub_hold - rub_price/100
+    }
+    
+    else if(rub_price[i] < wti_price[i-day_lag])
+    {
+      budget - 100
+      rub_hold <- rub_hold + rub_price[i]/100
+    }
+  }
+  
+  calced_profit <- budget + rub_price[length(rub_price)] * rub_hold - initial_budget
+  
+  return(paste("Profit = ", calced_profit))
+}
+```
+  
+  In this function, we considered our wti and rubtry prices, coefficients and intercepts of the time frame that we calculate and we assumed a day lag as we kind of applying backtesting approach, initial budget, and amount of trade in our research.
+  
+  Also, we wanted to remove our last time frame which is 2019-2021 in this report because its coefficients are a really odd comparing with other time frames.
+
+```{r}
+profit_1 <- ProfitCalculate(wti_price = wti_1$Adjusted, rub_price = rubtry_1$Adjusted,
+                            coeff = test_1$coefficients[2], int = test_1$coefficients[1],
+                            day_lag = 10, initial_budget = 1000, trade_amount = 100)
+
+profit_2 <- ProfitCalculate(wti_price = wti_2$Adjusted, rub_price = rubtry_2$Adjusted,
+                            coeff = test_2$coefficients[2], int = test_2$coefficients[1],
+                            day_lag = 10, initial_budget = 1000, trade_amount = 100)
+
+profit_3 <- ProfitCalculate(wti_price = wti_3$Adjusted, rub_price = rubtry_3$Adjusted,
+                            coeff = test_3$coefficients[2], int = test_3$coefficients[1],
+                            day_lag = 10, initial_budget = 1000, trade_amount = 100)
+
+print(profit_1)
+print(profit_2)
+print(profit_3)
+```
+
+  We found that we can make profit, but it is very small, nearly 2-3%.
