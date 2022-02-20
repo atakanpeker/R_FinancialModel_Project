@@ -1,3 +1,7 @@
+EC48T Financial Model Project
+================
+Atakan Peker
+
 ## About
 
 This is our group project (3 contributing members) for our “Financial
