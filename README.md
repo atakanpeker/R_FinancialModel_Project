@@ -32,6 +32,8 @@ To read the report, please click on the github document called "EC48T_Project.md
 
 ## Profit Calculation Formula
 
+Here is the script of our profit calculation model.
+
 ```
 ProfitCalculate <- function(wti_price, rub_price, coeff, int, day_lag, initial_budget, trade_amount)
 {
@@ -71,7 +73,7 @@ ProfitCalculate <- function(wti_price, rub_price, coeff, int, day_lag, initial_b
 
 ## Plots
 
-Here's the graphs of one time frame as an example.
+Here is the graphs of one time frame as an example.
 
 ![](https://github.com/atakanpeker/R_FinancialModel_Project/blob/main/2016-2018.png)
 
